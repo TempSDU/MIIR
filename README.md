@@ -53,7 +53,11 @@ accelerate launch --config_file accelerate_config.yaml Test.py -dataset_files bt
 
 For the *Toys and Games* dataset, please switch *bt_files.dat* to *tg_files.dat* and `checkpoint_miirs_bt/` to `checkpoint_miirs_tg/` in the above commands.
 
-If you want to run the MIIR-M which is the variant masking missing feature fields in self-attention, please replace the original TrainDataset_MII, TrainDataset_MLM and TestDataset_MLM with the commented ones in *DataLoader.py*.
+If you want to run the MIIR-M which is the variant masking missing feature fields in self-attention, please replace the original TrainDataset_MII, TrainDataset_MLM and TestDataset_MLM with the commented ones in *DataLoader.py*. And delete the following codes in *MIIR.py*:
+```python
+padding_mask = padding_mask.unsqueeze(2)  # [batch_size, seq_len, 1]
+padding_mask = padding_mask.repeat(1, 1, len(self.feature_fields)+1)  # [batch_size, seq_len, field_num]
+```
 
 If you want to run MIIR with the sparse fusion self-attention (SFSA), please free the following codes in *MIIR.py*:
 
