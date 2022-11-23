@@ -4,9 +4,9 @@ import torch.nn.functional as F
 from torch.nn import TransformerEncoderLayer
 
 
-class MIIR(nn.Module):
+class MIIRS(nn.Module):
     def __init__(self, dataset, emb_size=64, layer_num=3):
-        super(MIIR, self).__init__()
+        super(MIIRS, self).__init__()
         self.emb_size = emb_size
         self.layer_num = layer_num
         if dataset == 'tg':
@@ -27,8 +27,13 @@ class MIIR(nn.Module):
         self.input_mlps = nn.ModuleList()
         self.output_mlps = nn.ModuleList()
         for feature_field in self.feature_fields:
-            self.input_mlps.append(nn.Linear(feature_field[0], self.emb_size))
-            self.output_mlps.append(nn.Linear(self.emb_size, feature_field[0]))
+            if feature_field[1]:
+                feature_embeddings = nn.Embedding(feature_field[0], self.emb_size)
+                self.input_mlps.append(feature_embeddings)
+                self.output_mlps.append(feature_embeddings)
+            else:
+                self.input_mlps.append(nn.Linear(feature_field[0], self.emb_size))
+                self.output_mlps.append(nn.Linear(self.emb_size, feature_field[0]))
         self.net = nn.ModuleList(TransformerEncoderLayer(d_model=self.emb_size, nhead=4, dim_feedforward=self.emb_size*4, dropout=0.5, activation='gelu') for _ in range(self.layer_num))  # note that d_model%nhead=0
         self.cross_mask = None
 
@@ -58,7 +63,10 @@ class MIIR(nn.Module):
         inputs = [item_embs]
         f = 0
         for feature_field in session_feature_fields:
-            feature_embs = self.input_mlps[f](feature_field)  # [batch_size, seq_len, emb_size]
+            if self.feature_fields[f][1]:
+                feature_embs = torch.einsum('ijl,lk->ijk', feature_field, self.input_mlps[f].weight)  # [batch_size, seq_len, emb_size]
+            else:
+                feature_embs = self.input_mlps[f](feature_field)  # [batch_size, seq_len, emb_size]
             feature_embs = feature_embs.unsqueeze(2)  # [batch_size, seq_len, 1, emb_size]
             inputs.append(feature_embs)
             f += 1
@@ -76,12 +84,12 @@ class MIIR(nn.Module):
         shape = inputs.shape
         inputs = inputs.reshape(shape[0], shape[1]*shape[2], shape[3])  # [batch_size, seq_len*field_num, emb_size]
         temps = inputs.permute(1, 0, 2)  # [seq_len*field_num, batch_size, emb_size]
-        padding_mask = padding_mask.unsqueeze(2)  # [batch_size, seq_len, 1]
-        padding_mask = padding_mask.repeat(1, 1, len(self.feature_fields)+1)  # [batch_size, seq_len, field_num]
+        padding_mask = padding_mask.unsqueeze(2)  # [batch_size, seq_len, 1], if treat original missing feature fields as paddings in self-attention, comment this
+        padding_mask = padding_mask.repeat(1, 1, len(self.feature_fields)+1)  # [batch_size, seq_len, field_num], if treat original missing feature fields as paddings in self-attention, comment this
         padding_mask = padding_mask.reshape(shape[0], shape[1]*shape[2])  # [batch_size, seq_len*field_num]
-        #cross_mask = self.generate_cross_mask(shape[1], shape[2])  # if need to run the MIIR with SFSA, please free this code
+        #cross_mask = self.generate_cross_mask(shape[1], shape[2])
         for mod in self.net:
-            #temps = mod(temps, src_key_padding_mask=padding_mask, src_mask=cross_mask)  # [seq_len*field_num, batch_size, emb_size], if need to run the MIIR with SFSA, please free this code
+            #temps = mod(temps, src_key_padding_mask=padding_mask, src_mask=cross_mask)  # [seq_len*field_num, batch_size, emb_size]
             temps = mod(temps, src_key_padding_mask=padding_mask)  # [seq_len*field_num, batch_size, emb_size]
         temps = temps.permute(1, 0, 2)  # [batch_size, seq_len*field_num, emb_size]
         temps = temps.reshape(shape[0], shape[1], shape[2], shape[3])  # [batch_size, seq_len, field_num, emb_size]
@@ -91,7 +99,10 @@ class MIIR(nn.Module):
         outputs.append(output)
         f = 0
         while f < len(self.feature_fields):
-            output = self.output_mlps[f](temps[f+1])  # [batch_size, seq_len, *]
+            if self.feature_fields[f][1]:
+                output = torch.einsum('ijk,lk->ijl', temps[f+1], self.output_mlps[f].weight)  # [batch_size, seq_len, *]
+            else:
+                output = self.output_mlps[f](temps[f+1])  # [batch_size, seq_len, *]
             outputs.append(output)
             f += 1
         return outputs
