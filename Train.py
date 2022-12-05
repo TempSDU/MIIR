@@ -8,7 +8,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from accelerate import Accelerator
 from contextlib import suppress as nullcontext
-from DataLoader import TrainDataset_MLM, TrainDataset_CLM
+from DataLoader import TrainDataset_MLM
 from Utility import init_seeds, xavier_init
 from MIIR import *
 

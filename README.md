@@ -20,14 +20,15 @@ Note that we use *accelerate* to configure the training environment, please refe
 
 ## Datasets
 
-We use *Beauty* and *Toys and Games* datasets for experiments. Please download them from the [Amazon review data](https://nijianmo.github.io/amazon/index.html) and put them in folders `/data/bt/raw` and `/data/tg/raw` respectively. Then run the following commands to process the datasets:
+We use *Beauty*, *Sports and Outdoors* and *Toys and Games* datasets for experiments. Please download them from the [Amazon review data](https://nijianmo.github.io/amazon/index.html) and put them in folders `/data/bt/raw`,  `/data/so/raw` and `/data/tg/raw` respectively. Then run the following commands to process the datasets:
 
 ```python
 python ProcessBT.py
+python ProcessSO.py
 python ProcessTG.py
 ```
 
-In order to easily switch the datasets in experiments, we use *bt_files.dat* and *tg_files.dat* to record all filepaths. The experiments are performed on the datasets after discard by default. For running the experiments on the datasets before discard, please revise *bt_files.dat* and *tg_files.dat*:
+In order to easily switch the datasets in experiments, we use *bt_files.dat* and *tg_files.dat* to record all filepaths. The experiments are performed on the datasets after discard by default. For running the experiments on the datasets before discard, please revise *bt_files.dat*, *so_files.dat* and *tg_files.dat*:
 
 ```json
 'masks_filepath': None
@@ -51,9 +52,10 @@ accelerate launch --config_file accelerate_config.yaml Valid.py -dataset_files b
 accelerate launch --config_file accelerate_config.yaml Test.py -dataset_files bt_files.dat -save_path checkpoint_miirs_bt/
 ```
 
-For the *Toys and Games* dataset, please switch *bt_files.dat* to *tg_files.dat* and `checkpoint_miirs_bt/` to `checkpoint_miirs_tg/` in the above commands.
+For the *Sports and Outdoors* (*Toys and Games*) dataset, please switch *bt_files.dat* to *so_files.dat* (*tg_files.dat*) and `checkpoint_miirs_bt/` to `checkpoint_miirs_so/` (`checkpoint_miirs_tg/`) in the above commands.
 
-If you want to run the MIIR-M which is the variant masking missing feature fields in self-attention, please replace the original TrainDataset_MII, TrainDataset_MLM and TestDataset_MLM with the commented ones in *DataLoader.py*. And delete the following codes in *MIIR.py*:
+If you want to run the MIIR-M which is the variant masking missing feature fields in self-attention, please replace the original TrainDataset_MII, TrainDataset_MLM and TestDataset_MLM with the annotated ones in *DataLoader.py*. And delete the following codes in *MIIR.py*:
+
 ```python
 padding_mask = padding_mask.unsqueeze(2)  # [batch_size, seq_len, 1]
 padding_mask = padding_mask.repeat(1, 1, len(self.feature_fields)+1)  # [batch_size, seq_len, field_num]
@@ -63,5 +65,5 @@ If you want to run MIIR with the sparse fusion self-attention (SFSA), please fre
 
 ```python
 cross_mask = self.generate_cross_mask(shape[1], shape[2])
-temps = mod(temps, src_key_padding_mask=padding_mask, src_mask=cross_mask)  # and comment temps = mod(temps, src_key_padding_mask=padding_mask) 
+temps = mod(temps, src_key_padding_mask=padding_mask, src_mask=cross_mask)  # and delete temps = mod(temps, src_key_padding_mask=padding_mask) 
 ```

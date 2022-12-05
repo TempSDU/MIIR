@@ -21,6 +21,12 @@ class MIIRS(nn.Module):
                                    (13189, 'softmax'),  # brand, note that include missing
                                    (768, None),  # title
                                    (768, None)]  # description
+        if dataset == 'so':
+            self.item_num = 194717  # note that include padding and missing
+            self.feature_fields = [(3036, 'sigmoid'),  # category, note that include missing
+                                   (14164, 'softmax'),  # brand, note that include missing
+                                   (768, None),  # title
+                                   (768, None)]  # description                                   
         self.item_embeddings = nn.Embedding(self.item_num, self.emb_size)
         self.position_embeddings = nn.Embedding(100, self.emb_size)
         self.feature_field_embeddings = nn.Embedding(len(self.feature_fields)+1, self.emb_size)  # +1 for item id
