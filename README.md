@@ -28,7 +28,7 @@ python ProcessSO.py
 python ProcessTG.py
 ```
 
-In order to easily switch the datasets in experiments, we use *bt_files.dat* and *tg_files.dat* to record all filepaths. The experiments are performed on the datasets after discard by default. For running the experiments on the datasets before discard, please revise *bt_files.dat*, *so_files.dat* and *tg_files.dat*:
+In order to easily switch the datasets in experiments, we use *bt_files.dat*, *so_files.dat* and *tg_files.dat* to record all filepaths. The experiments are performed on the datasets after discard by default. For running the experiments on the datasets before discard, please revise *bt_files.dat*, *so_files.dat* and *tg_files.dat*:
 
 ```json
 'masks_filepath': None
